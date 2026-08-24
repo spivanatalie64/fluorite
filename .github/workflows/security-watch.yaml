@@ -1,0 +1,141 @@
+name: Security Watch
+
+# Weekly check for new Chromium stable releases. Security-updates-only policy:
+# we always track the latest stable tag. If build/RELEASE is behind, a tracking
+# issue is opened/updated and the build pipeline is dispatched automatically.
+# The job exits immediately when nothing to do.
+
+on:
+  schedule:
+    - cron: '37 4 * * 1'  # Mondays ~04:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: write
+  packages: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Compare current release against latest Chromium stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT=$(cat build/RELEASE)
+          CURRENT_MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          ALL=$(curl -fsSL \
+            'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=50' |
+            jq -r '.[].version' | sort -Vu)
+
+          # Security bump: newest point release within our current major.
+          POINT=$(grep "^$CURRENT_MAJOR\." <<<"$ALL" | sort -V | tail -1)
+
+          # Next train: a newer major exists at all.
+          NEXT_MAJOR=$(sort -V <<<"$ALL" | tail -1)
+
+          echo "current=$CURRENT"
+          echo "point =$POINT"
+          echo "latest=$NEXT_MAJOR"
+
+          if [[ -n "$POINT" && "$(printf '%s\n%s\n' "$CURRENT" "$POINT" | sort -V | tail -1)" != "$CURRENT" ]]; then
+            echo "SECURITY_BUMP=true" >> $GITHUB_ENV
+            echo "TARGET=$POINT" >> $GITHUB_ENV
+            exit 0  # security bumps run regardless of train schedule
+          fi
+
+          LAST_DATE=$(gh api repos/${{ github.repository }}/releases --jq '.[0].published_at' 2>/dev/null || echo "")
+          if [[ -z "$LAST_DATE" ]]; then
+            echo "No prior releases; treating as first train."
+            echo "FIRST_TRAIN=true" >> $GITHUB_ENV
+            exit 0
+          fi
+          DAYS=$(( ($(date +%s) - $(date -d "$LAST_DATE" +%s)) / 86400 ))
+          MAJOR=$(echo "$NEXT_MAJOR" | cut -d. -f1)
+          if [[ "$MAJOR" -gt "$CURRENT_MAJOR" && "$DAYS" -ge 42 ]]; then
+            echo "TRAIN_DUE=true" >> $GITHUB_ENV
+            echo "TARGET=$NEXT_MAJOR" >> $GITHUB_ENV
+            echo "Train due: $DAYS days since last release, major $MAJOR available."
+          elif [[ "$MAJOR" -gt "$CURRENT_MAJOR" ]]; then
+            echo "New major $MAJOR exists but train not due ($DAYS < 42 days). Holding."
+          else
+            echo "Up to date. Nothing to do."
+          fi
+
+      - name: Open or update tracking issue
+        if: env.SECURITY_BUMP == 'true' || env.TRAIN_DUE == 'true' || env.FIRST_TRAIN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE_PREFIX: 'Chromium update available'
+        run: |
+          if [[ "${{ env.FIRST_TRAIN }}" == "true" ]]; then
+            KIND="initial build"
+          elif [[ "${{ env.SECURITY_BUMP }}" == "true" ]]; then
+            KIND="security bump"
+          else
+            KIND="6-week train"
+          fi
+          BODY=$(cat <<EOF
+          Chromium \`$TARGET\` is available ($KIND).
+
+          Fresh checkout, frozen patch stack re-applied, full rebuild, release.
+          The build pipeline has been dispatched automatically. Edit this issue
+          to track any patches that fail to apply.
+          EOF
+          )
+          EXISTING=$(gh issue list --state open --search "$TITLE_PREFIX in:title" --json number --jq '.[0].number' || true)
+          if [[ -n "$EXISTING" ]]; then
+            gh issue edit "$EXISTING" --title "$TITLE_PREFIX: $TARGET" --body "$BODY"
+          else
+            gh issue create --title "$TITLE_PREFIX: $TARGET" --body "$BODY"
+          fi
+
+      - name: Dispatch build pipeline
+        if: env.SECURITY_BUMP == 'true' || env.TRAIN_DUE == 'true' || env.FIRST_TRAIN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build-fluorite.yaml \
+            --ref ${{ github.ref_name }} \
+            -f target_os=android -f arch=all -f debug=false \
+            -f resume=true -f push_state=true
+
+  # Snapshot hygiene: keep only the newest build-state snapshot per target.
+  # Prevents GHCR bloat from the watchdog's periodic docker commits.
+  cleanup-snapshots:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prune old snap-* image versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_LC: ${{ github.repository_owner }}
+        run: |
+          OWNER_LC=$(echo "$OWNER_LC" | tr '[:upper:]' '[:lower:]')
+          PKG="fluorite%2Fbuilder"
+          ALL=$(gh api --paginate "/users/$OWNER_LC/packages/container/$PKG/versions" | jq -s 'map(.[])')
+
+          echo "$ALL" | jq -c '.[]' | while read -r V; do
+            TAGS=$(jq -r '.metadata.container.tags | join(",")' <<<"$V")
+            case "$TAGS" in
+              *snap-*)
+                TARGET=$(echo "$TAGS" | tr ',' '\n' | grep -o 'snap-.*' | head -1 | cut -d- -f2-)
+                UPDATED=$(jq -r '.updated_at' <<<"$V")
+                echo "$TARGET|$UPDATED|$(jq -r .id <<<"$V")"
+                ;;
+            esac
+          done | sort -t'|' -k1,1 -k2,2r > /tmp/snaps.txt
+
+          KEEP_IDS=$(awk -F'|' '!seen[$1]++ {print $3}' /tmp/snaps.txt)
+          DELETED=0
+          while IFS='|' read -r TARGET UPDATED ID; do
+            if ! grep -qx "$ID" <<<"$KEEP_IDS"; then
+              gh api -X DELETE "/users/$OWNER_LC/packages/container/$PKG/versions/$ID" && DELETED=$((DELETED+1))
+            fi
+          done < /tmp/snaps.txt
+          echo "Pruned $DELETED old snapshot(s); kept newest per target."

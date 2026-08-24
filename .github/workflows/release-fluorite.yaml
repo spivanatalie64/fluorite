@@ -1,0 +1,130 @@
+name: Release Fluorite
+
+# Staged rollout. Artifacts come from a tested build run; nothing here builds.
+#
+#   beta channel   → prerelease published immediately
+#   stable channel → requires 'stable' environment approval (configure in repo
+#                    Settings > Environments > stable > Required reviewers),
+#                    then flips the same release to latest/stable.
+#
+# Every APK gets build-provenance attestation + SHA256SUMS sidecar.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build Fluorite run id (default: latest successful)'
+        required: false
+        default: ''
+      channel:
+        description: '[beta/stable]'
+        required: true
+        default: 'beta'
+      tag:
+        description: 'release tag (default: v<RELEASE>)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+  id-token: write
+  attestations: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: beta
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      run_id: ${{ steps.pick.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RID="${{ github.event.inputs.run_id }}"
+          if [[ -z "$RID" ]]; then
+            RID=$(gh run list --workflow=build-fluorite.yaml --status success \
+                    --json databaseId --jq '.[0].databaseId')
+          fi
+          [[ -n "$RID" ]] || { echo "::error::no build run found"; exit 1; }
+          echo "run_id=$RID" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: ${{ steps.pick.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+          merge-multiple: true
+
+      - id: tag
+        run: |
+          VERSION=$(find artifacts -name 'RELEASE-*' | head -1 | xargs cat 2>/dev/null || cat build/RELEASE)
+          TAG="${{ github.event.inputs.tag }}"
+          [[ -n "$TAG" ]] || TAG="v$VERSION"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Collect APKs + checksums
+        run: |
+          mkdir -p out
+          find artifacts -name '*.apk' -exec cp {} out/ \;
+          cd out
+          sha256sum *.apk > SHA256SUMS
+          ls -la
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@92c65d2898f1f53cfdc910b962cecff86e7f8fcc
+        with:
+          subject-path: out/*.apk
+
+      - name: Generate notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV=$(gh release list --limit 5 --json tagName,isPrerelease \
+                  --jq '[.[] | select(.isPrerelease==false)][0].tagName' 2>/dev/null || echo "")
+          {
+            echo "## Fluorite ${{ steps.tag.outputs.version }}"
+            echo ""
+            echo "Chromium \`${{ steps.tag.outputs.version }}\` + frozen Cromite patch stack."
+            echo "Build run: https://github.com/${{ github.repository }}/actions/runs/${{ steps.pick.outputs.run_id }}"
+            if [[ -n "$PREV" ]]; then
+              echo ""
+              echo "### Patch changes since $PREV"
+              echo '```'
+              git log --oneline "$PREV"..HEAD -- build/patches build/cromite_patches_list.txt | head -50
+              echo '```'
+            fi
+            echo ""
+            echo "Verify: \`sha256sum -c SHA256SUMS\` — provenance attestations on each APK."
+          } > notes.md
+
+      - name: Publish release (${{ github.event.inputs.channel }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARGS=(--title "Fluorite ${{ steps.tag.outputs.version }}" --notes-file notes.md)
+          if [[ "${{ github.event.inputs.channel }}" == "beta" ]]; then
+            ARGS+=(--prerelease)
+          else
+            ARGS+=(--latest)
+          fi
+          gh release create "${{ steps.tag.outputs.tag }}" out/* "${ARGS[@]}"
+
+  promote-stable:
+    needs: publish
+    if: ${{ github.event.inputs.channel == 'stable' }}
+    runs-on: ubuntu-latest
+    environment: stable   # configure required reviewers in repo settings
+    steps:
+      - name: Flip release to latest/stable
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "${{ needs.publish.outputs.tag }}" \
+            --latest --prerelease=false \
+            --notes "Stable promotion of ${{ needs.publish.outputs.tag }}."

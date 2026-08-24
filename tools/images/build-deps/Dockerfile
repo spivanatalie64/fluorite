@@ -1,51 +1,37 @@
-FROM ubuntu:20.04
+# Stage 1/4: base image with all Chromium build dependencies installed.
+# Generic: no user-specific paths, no proxy assumptions, no registry assumptions.
+ARG BASE_IMAGE=ubuntu:22.04
+FROM ${BASE_IMAGE}
+
 ARG VERSION
-
-ARG HTTP_PROXY
-
 ENV DEBIAN_FRONTEND=noninteractive
-
-ENV HTTP_PROXY=$HTTP_PROXY
-ENV http_proxy=$HTTP_PROXY
-
-ENV HTTPS_PROXY=$HTTP_PROXY
-ENV https_proxy=$HTTP_PROXY
-
-RUN touch /etc/apt/apt.conf.d/proxy.conf && \
-    echo "Acquire::http::Proxy \"$HTTP_PROXY\";" >/etc/apt/apt.conf.d/proxy.conf
 
 RUN dpkg --add-architecture i386
 
 RUN apt-get update && \
-    apt-get -f -y install sudo lsb-release cl-base64 bash wget apt-utils python sed tzdata build-essential lib32gcc-9-dev g++-multilib dos2unix wiggle
+    apt-get -f -y install sudo lsb-release bash wget curl apt-utils python3 sed tzdata \
+      build-essential lib32gcc-s1 g++-multilib dos2unix wiggle git python3-distutils jq xz-utils unzip
 
-ENV user lg
-
-RUN useradd -m -d /home/${user} ${user} && \
-    chown -R ${user} /home/${user} && \
-    adduser ${user} sudo && \
+ENV USER_NAME builder
+ARG UID=1000
+RUN useradd -m -d /home/${USER_NAME} -u ${UID} -s /bin/bash ${USER_NAME} && \
+    chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME} && \
+    adduser ${USER_NAME} sudo && \
     chmod 4755 /usr/bin/sudo && \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-USER ${user}
+USER ${USER_NAME}
+WORKDIR /workspace
 
-#RUN mkdir -p /home/${user} && \
-#    echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-WORKDIR /home/${user}
-
-RUN echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
-
-RUN wget https://raw.githubusercontent.com/chromium/chromium/$VERSION/build/install-build-deps.sh || \
-    wget -qO- https://chromium.googlesource.com/chromium/src/+/refs/tags/$VERSION/build/install-build-deps.sh?format=TEXT | base64 --decode > install-build-deps.sh
-
-RUN wget https://raw.githubusercontent.com/chromium/chromium/$VERSION/build/install-build-deps.py || \
-    wget -qO- https://chromium.googlesource.com/chromium/src/+/refs/tags/$VERSION/build/install-build-deps.py?format=TEXT | base64 --decode > install-build-deps.py
-
-RUN sed -i 's/snapcraft/wget/' install-build-deps.sh && \
-    chmod +x ./install-build-deps.sh && \
-    chmod +x ./install-build-deps.py && \
+# Chromium's install-build-deps scripts for the given source version.
+RUN wget -q https://raw.githubusercontent.com/chromium/chromium/$VERSION/build/install-build-deps.sh && \
+    wget -q https://raw.githubusercontent.com/chromium/chromium/$VERSION/build/install-build-deps.py && \
+    sed -i 's/snapcraft/wget/' install-build-deps.sh && \
+    chmod +x ./install-build-deps.sh ./install-build-deps.py && \
     sudo DEBIAN_FRONTEND=noninteractive ./install-build-deps.sh --no-prompt --lib32 --no-chromeos-fonts && \
     sudo DEBIAN_FRONTEND=noninteractive ./install-build-deps.sh --android --no-prompt --no-chromeos-fonts && \
-    sudo mkdir -p /github/home/.vscode-server && \
-    sudo chown lg /github/home/.vscode-server
+    rm -f install-build-deps.sh install-build-deps.py
 
+RUN sudo mkdir -p /workspace /github/home/.config/depot_tools && \
+    sudo chown -R ${USER_NAME}:${USER_NAME} /workspace /github/home/.config/depot_tools
+
+ENV WORKSPACE=/workspace

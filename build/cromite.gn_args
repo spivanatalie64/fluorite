@@ -105,8 +105,8 @@ if (target_os == "android") {
   dfmify_dev_ui = false
 
   if (getenv("USE_KEYSTORE") != "") {
-    android_keystore_path = "/home/lg/working_dir/cromite.keystore"
-    android_keystore_name = "cromite"
+    android_keystore_path = getenv("KEYSTORE_PATH")
+    android_keystore_name = getenv("KEYSTORE_NAME")
     android_keystore_password = getenv("KEYSTORE_PASSWORD")
   }
 

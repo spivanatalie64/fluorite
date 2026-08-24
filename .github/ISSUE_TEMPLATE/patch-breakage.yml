@@ -1,0 +1,28 @@
+name: Patch breakage
+description: A frozen-stack patch failed to apply on a new Chromium version
+labels: ['patches']
+body:
+  - type: input
+    id: chromium_version
+    attributes:
+      label: Chromium version
+      placeholder: '152.0.1234.56'
+    validations:
+      required: true
+  - type: textarea
+    id: patches
+    attributes:
+      label: Failing patch(es)
+      description: One per line, from build/patches/
+    validations:
+      required: true
+  - type: checkboxes
+    id: fix_policy
+    attributes:
+      label: Fix policy reminder
+      options:
+        - label: I will fix the patch minimally and keep it in the frozen stack (no feature work)
+  - type: textarea
+    id: notes
+    attributes:
+      label: Upstream refactor context (links to chromium source changes if known)

@@ -1,0 +1,317 @@
+name: Test Fluorite
+
+# Robust pre-rollout gate. Nothing ships until this passes.
+#
+#   static    signature, zipalign, package identity vs EXPECTED_PKG,
+#             versionName vs built RELEASE, no debuggable flag
+#   emulator  boot, cold-start timing budget, install, launcher activity,
+#             multi-page navigation (incl chrome:// pages), render sanity,
+#             monkey stress, tombstone delta, two-tier crash/ANR scan
+#
+# Runs automatically after every successful Build Fluorite run, or manually
+# with an explicit run id.
+
+on:
+  workflow_run:
+    workflows: ['Build Fluorite']
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build Fluorite run id (default: latest successful)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  ANDROID_API: '31'
+  # One-line flip during the branding milestone.
+  EXPECTED_PKG: org.cromite.cromite
+  COLD_START_BUDGET_MS: '25000'   # emulator/swiftshader budget, not device-realistic
+  MIN_SCREENSHOT_BYTES: '10240'   # below this nothing rendered
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.pick.outputs.run_id }}
+      found_apks: ${{ steps.list.outputs.found }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - id: pick
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RID="${{ github.event.inputs.run_id || github.event.workflow_run.id }}"
+          if [[ -z "$RID" ]]; then
+            RID=$(gh run list --workflow=build-fluorite.yaml --status success \
+                    --json databaseId --jq '.[0].databaseId')
+            [[ -n "$RID" ]] || { echo "::error::no successful build-fluorite run"; exit 1; }
+          fi
+          echo "run_id=$RID" >> $GITHUB_OUTPUT
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          run-id: ${{ steps.pick.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+          merge-multiple: true
+
+      - id: list
+        run: |
+          find artifacts -name '*.apk' | sort
+          N=$(find artifacts -name '*.apk' | wc -l)
+          [[ "$N" -gt 0 ]] || { echo "::error::no APKs in run ${{ steps.pick.outputs.run_id }}"; exit 1; }
+          echo "found=$N" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: apks-under-test
+          path: artifacts/**/*.apk
+
+  static:
+    needs: fetch
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: apks-under-test
+          path: artifacts
+
+      - name: Verify APK integrity + identity (${{ matrix.abi }})
+        run: |
+          BT=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)
+          APK=$(find artifacts -path "*${{ matrix.abi }}*" -name '*.apk' ! -name '*webview*' | head -1)
+          [[ "$APK" =~ armeabi|x86_64|arm64 ]] || APK=$(find artifacts -name '*.apk' ! -name '*webview*' | head -1)
+          [[ -n "$APK" ]] || { echo "::error::no APK for ${{ matrix.abi }}"; exit 1; }
+          echo "checking $APK"
+
+          BADGING=$("$BT/aapt" dump badging "$APK")
+
+          echo "--- signature ---"
+          "$BT/apksigner" verify --print-certs "$APK"
+
+          echo "--- alignment ---"
+          "$BT/zipalign" -c 4 "$APK"
+
+          echo "--- identity ---"
+          PKG=$(awk '/^package:/ {print $2}' <<<"$BADGING" | cut -d\' -f2)
+          VER=$(awk '/^package:/ {print $2}' <<<"$BADGING" | cut -ds -f3 | cut -d\' -f2)
+          echo "package=$PKG versionName=$VER"
+          [[ "$PKG" == "$EXPECTED_PKG" ]] \
+            || { echo "::error::package mismatch: got $PKG want $EXPECTED_PKG"; exit 1; }
+
+          BUILT=$(find artifacts -name 'RELEASE-*' | head -1)
+          if [[ -n "$BUILT" ]]; then
+            WANT=$(cat "$BUILT")
+            [[ "$VER" == "$WANT" ]] \
+              || { echo "::error::version mismatch: APK=$VER build/RELEASE=$WANT"; exit 1; }
+          else
+            echo "::warning::no RELEASE artifact to cross-check versionName"
+          fi
+
+          if grep -q 'application-debuggable' <<<"$BADGING"; then
+            echo "::error::release APK must not be debuggable"; exit 1
+          fi
+
+  emulator:
+    needs: [fetch, static]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { abi: x86_64,    full: true }
+          - { abi: arm64-v8a, full: false }
+    env:
+      BT: ${{ runner.temp }}/bt
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: apks-under-test
+          path: artifacts
+
+      - name: Enable KVM
+        if: matrix.abi == 'x86_64'
+        run: |
+          sudo -E swapoff -a
+          sudo rm -f /swapfile
+          ls -la /dev/kvm
+
+      - name: Create AVD
+        run: |
+          sdkmanager "system-images;android-${{ env.ANDROID_API }};google_apis;${{ matrix.abi }}" > /dev/null
+          echo no | avdmanager create avd -n test -k "system-images;android-${{ env.ANDROID_API }};google_apis;${{ matrix.abi }}" -d pixel_5
+
+      - name: Boot emulator
+        timeout-minutes: 45
+        run: |
+          emulator -avd test -no-window -no-audio -no-boot-anim \
+            -gpu swiftshader_indirect -no-snapshot -camera-back none \
+            -memory 4096 > emulator.log 2>&1 &
+          adb wait-for-device shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done'
+          adb root >/dev/null 2>&1 || true   # google_apis images are userdebug
+          sleep 3
+          echo "boot complete"
+          TOMB_BASE=$(adb shell ls /data/tombstones 2>/dev/null | grep -vc '^$' || echo 0)
+          echo "TOMB_BASE=$TOMB_BASE" >> $GITHUB_ENV
+
+      - name: Install APK
+        run: |
+          mkdir -p "$BT"
+          ln -sf $(ls -d $ANDROID_HOME/build-tools/*/* | sort -V | tail -1)* "$BT/" 2>/dev/null || true
+          AAPT=$(command -v aapt || ls $ANDROID_HOME/build-tools/*/aapt | sort -V | tail -1)
+
+          APK=$(find artifacts -name '*chrome*.apk' ! -name '*webview*' | head -1)
+          [[ -n "$APK" ]] || APK=$(find artifacts -name '*.apk' | head -1)
+          echo "installing $APK"
+          adb install -r "$APK"
+
+          PKG=$("$AAPT" dump badging "$APK" | awk '/^package:/ {print $2}' | cut -d\' -f2)
+          [[ "$PKG" == "$EXPECTED_PKG" ]] || { echo "::error::unexpected package $PKG"; exit 1; }
+          adb shell pm list packages | grep "$PKG"
+          echo "PKG=$PKG" >> $GITHUB_ENV
+
+      - name: Launch + cold-start budget
+        run: |
+          ACT=$(adb shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER \
+                 $PKG | tail -1 | tr -d '\r')
+          echo "launching $ACT"
+          OUT=$(adb shell am start -W -n "$ACT")
+          echo "$OUT"
+          TOTAL=$(awk '/TotalTime:/ {print $2}' <<<$OUT)
+          [[ -n "$TOTAL" ]] && (( TOTAL <= COLD_START_BUDGET_MS )) \
+            || { echo "::error::cold start ${TOTAL}ms exceeds budget ${COLD_START_BUDGET_MS}ms"; exit 1; }
+          adb shell pidof $PKG > /dev/null || { echo "::error::process died at launch"; exit 1; }
+          adb exec-out screencap -p > screenshot-launch.png
+
+      - name: Render sanity
+        run: |
+          SZ=$(stat -c%s screenshot-launch.png)
+          echo "launch screenshot: $SZ bytes"
+          (( SZ >= MIN_SCREENSHOT_BYTES )) \
+            || { echo "::error::screenshot suspiciously empty ($SZ bytes) — nothing rendered?"; exit 1; }
+
+      - name: Multi-page navigation
+        if: matrix.full
+        run: |
+          for URL in "https://example.com/" "https://www.chromium.org/" \
+                     "data:text/html,<title>t</title><h1>fluorite-smoke</h1>" \
+                     "chrome://version"; do
+            echo "--- navigating $URL"
+            adb shell am start -a android.intent.action.VIEW -d "$URL" $PKG
+            sleep 12
+            adb shell pidof $PKG > /dev/null \
+              || { echo "::error::browser died loading $URL"; exit 1; }
+            adb exec-out screencap -p > "screenshot-nav-$(echo "$URL" | md5sum | cut -c1-8).png"
+          done
+
+      - name: Monkey stress
+        if: matrix.full
+        run: |
+          adb shell monkey -p $PKG --throttle 250 --pct-syskeys 0 \
+            --ignore-security-exceptions 400
+          sleep 5
+          adb shell pidof $PKG > /dev/null \
+            || { echo "::error::browser died under monkey stress"; exit 1; }
+
+      - name: Crash + ANR + tombstone audit
+        if: always()
+        run: |
+          adb logcat -d > logcat.txt || true
+
+          HARD='FATAL EXCEPTION|Fatal signal|F/libc|CHECK failed|ANR in '
+          HITS=$(grep -E "$HARD" logcat.txt || true)
+          if [[ -n "$HITS" ]]; then
+            echo "::error::crash/ANR detected in logcat:"
+            echo "$HITS" | head -20
+            exit 1
+          fi
+
+          SOFT=$(grep 'AndroidRuntime' logcat.txt || true)
+          if [[ -n "$SOFT" ]]; then
+            echo "::warning::AndroidRuntime noise (review): "
+            echo "$SOFT" | head -5
+          fi
+
+          if [[ "${{ matrix.full }}" == "true" ]]; then
+            TOMB_NOW=$(adb shell ls /data/tombstones 2>/dev/null | grep -vc '^$' || echo 0)
+            echo "tombstones: base=${{ env.TOMB_BASE }} now=$TOMB_NOW"
+            (( TOMB_NOW > ${{ env.TOMB_BASE }} )) \
+              && { echo "::error::new native tombstones written during test"; exit 1; } || true
+          fi
+          echo "audit clean"
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: test-evidence-${{ matrix.abi }}
+          path: |
+            screenshot-*.png
+            logcat.txt
+            emulator.log
+
+  # Evidence-collecting stage (v1): renders the creepjs fingerprinting probe in
+  # the emulator and archives screenshot + extracted text for manual review.
+  # NOT yet a hard gate — automated fp-scoring is unreliable; a human compares
+  # against the previous release's evidence.
+  fingerprint:
+    needs: [fetch, static]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: apks-under-test
+          path: artifacts
+
+      - name: Create + boot AVD
+        timeout-minutes: 45
+        run: |
+          sdkmanager "system-images;android-${{ env.ANDROID_API }};google_apis;x86_64" > /dev/null
+          echo no | avdmanager create avd -n test -k "system-images;android-${{ env.ANDROID_API }};google_apis;x86_64" -d pixel_5
+          emulator -avd test -no-window -no-audio -no-boot-anim \
+            -gpu swiftshader_indirect -no-snapshot -camera-back none \
+            -memory 4096 > emulator-fp.log 2>&1 &
+          adb wait-for-device shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done'
+
+      - name: Install + open creepjs
+        run: |
+          AAPT=$(ls $ANDROID_HOME/build-tools/*/aapt | sort -V | tail -1)
+          APK=$(find artifacts -name '*chrome*.apk' ! -name '*webview*' | head -1)
+          adb install -r "$APK"
+          PKG=$("$AAPT" dump badging "$APK" | awk '/^package:/ {print $2}' | cut -d\' -f2)
+          adb shell am start -a android.intent.action.VIEW \
+            -d "https://abrahamjuliot.github.io/creepjs/" "$PKG"
+          sleep 60   # creepjs runs long crypto/timing probes
+
+      - name: Capture evidence
+        run: |
+          adb exec-out screencap -p > fingerprint-creepjs.png
+          adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true
+          adb pull /sdcard/ui.xml ui.xml 2>/dev/null || true
+          [[ -f ui.xml ]] && python3 -c "
+          import re,html
+          s=open('ui.xml',encoding='utf-8',errors='ignore').read()
+          texts=[html.unescape(t) for t in re.findall(r'text=\"([^\"]+)\"',s) if t.strip()]
+          print('\n'.join(texts))" > fingerprint-extracted.txt || true
+          adb logcat -d > logcat-fp.txt || true
+
+      - name: Upload fingerprint evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fingerprint-evidence
+          path: |
+            fingerprint-*
+            logcat-fp.txt
+            emulator-fp.log

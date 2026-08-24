@@ -1,0 +1,340 @@
+name: Build Fluorite
+
+# Stateless patch-train build pipeline.
+#
+# Images (GHCR, disposable per Chromium major):
+#   $PREFIX/build-deps:$V          apt deps
+#   $PREFIX/chromium:$V            clean chromium checkout
+#   $PREFIX/patched:$V-$SHA        + fork patches applied
+#   $PREFIX/builder:$V-$SHA-$OS    compile-ready; per-target snapshots carry out/
+#
+# Each build runs inside a detached container via `docker exec`, then commits
+# the container back as a per-target snapshot so interrupted builds resume
+# within the hosted-runner 6h wall. Throw everything away every major bump.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Fluorite SHA to build (default: current ref)'
+        required: false
+        default: ''
+      target_os:
+        description: 'targetos [android/linux/all]'
+        required: true
+        default: 'android'
+      arch:
+        description: 'android arch [arm/arm64/x64/all]'
+        required: true
+        default: 'all'
+      debug:
+        description: 'debug [true/false]'
+        required: true
+        default: 'false'
+      resume:
+        description: 'reuse prior snapshot [true/false]'
+        required: true
+        default: 'true'
+      push_state:
+        description: 'commit/push build state snapshot [true/false]'
+        required: true
+        default: 'true'
+      unit_tests:
+        description: 'run host unit-test tier [true/false]'
+        required: true
+        default: 'false'
+      attempt:
+        description: 'internal: auto-resume retry counter'
+        required: false
+        default: '0'
+
+permissions:
+  contents: read
+  packages: write
+  actions: write
+
+env:
+  IMAGE_REGISTRY: ghcr.io
+  RAW_OWNER: ${{ github.repository_owner }}
+  DEBUG_FLAG: ${{ github.event.inputs.debug }}
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    outputs:
+      prefix: ${{ steps.cfg.outputs.prefix }}
+      version: ${{ steps.cfg.outputs.version }}
+      sha: ${{ steps.cfg.outputs.sha }}
+      sha7: ${{ steps.cfg.outputs.sha7 }}
+      oslist: ${{ steps.cfg.outputs.oslist }}
+      osltag: ${{ steps.cfg.outputs.osltag }}
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.inputs.sha || github.ref }}
+          fetch-depth: 1
+          path: repo
+
+      - id: cfg
+        name: Compute configuration
+        run: |
+          PREFIX="$IMAGE_REGISTRY/$(echo "$RAW_OWNER" | tr '[:upper:]' '[:lower:]')/fluorite"
+          echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+          V=$(cat repo/build/RELEASE)
+          echo "version=$V" >> $GITHUB_OUTPUT
+          SHA="${{ github.event.inputs.sha }}"
+          [ -z "$SHA" ] && SHA=$(git -C repo rev-parse HEAD)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+          echo "sha7=${SHA::7}" >> $GITHUB_OUTPUT
+          case "${{ github.event.inputs.target_os }}" in
+            android) OSLIST="android" ;;
+            linux)   OSLIST="linux" ;;
+            all)     OSLIST="android linux" ;;
+          esac
+          echo "oslist=$OSLIST" >> $GITHUB_OUTPUT
+          echo "osltag=$(echo $OSLIST | tr ' ' '-')" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
+
+      - name: Install regctl
+        run: |
+          curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 >regctl
+          chmod 755 regctl
+
+      - name: Ensure build-deps image
+        run: |
+          IMG=${{ steps.cfg.outputs.prefix }}/build-deps:${{ steps.cfg.outputs.version }}
+          docker pull $IMG && exit 0
+          ./regctl image inspect $IMG >/dev/null 2>&1 && { docker pull $IMG; exit 0; }
+          DOCKER_BUILDKIT=1 docker build -t $IMG \
+            --build-arg VERSION=${{ steps.cfg.outputs.version }} \
+            --no-cache tools/images/build-deps
+          docker push $IMG
+
+      - name: Ensure chromium image
+        run: |
+          P=${{ steps.cfg.outputs.prefix }}
+          V=${{ steps.cfg.outputs.version }}
+          docker pull $P/chromium:$V && exit 0
+          ./regctl image inspect $P/chromium:$V >/dev/null 2>&1 && { docker pull $P/chromium:$V; exit 0; }
+          DOCKER_BUILDKIT=1 docker build -t $P/chromium:$V \
+            --build-arg BASE_IMAGE=$P/build-deps:$V \
+            --build-arg TARGET_OS_LIST="${{ steps.cfg.outputs.oslist }}" \
+            tools/images/chromium
+          docker push $P/chromium:$V
+
+      - name: Ensure patched image
+        run: |
+          P=${{ steps.cfg.outputs.prefix }}
+          V=${{ steps.cfg.outputs.version }}
+          S=${{ steps.cfg.outputs.sha7 }}
+          docker pull $P/patched:$V-$S && exit 0
+          ./regctl image inspect $P/patched:$V-$S >/dev/null 2>&1 && { docker pull $P/patched:$V-$S; exit 0; }
+          DOCKER_BUILDKIT=1 docker build -t $P/patched:$V-$S \
+            --build-arg BASE_IMAGE=$P/chromium:$V \
+            --build-arg SOURCE_REPO=${{ github.server_url }}/${{ github.repository }} \
+            --build-arg PATCH_SHA=${{ steps.cfg.outputs.sha }} \
+            tools/images/patched
+          docker push $P/patched:$V-$S
+
+      - name: Ensure builder image
+        run: |
+          P=${{ steps.cfg.outputs.prefix }}
+          V=${{ steps.cfg.outputs.version }}
+          S=${{ steps.cfg.outputs.sha7 }}
+          O=${{ steps.cfg.outputs.osltag }}
+          docker pull $P/builder:$V-$S-$O && exit 0
+          ./regctl image inspect $P/builder:$V-$S-$O >/dev/null 2>&1 && { docker pull $P/builder:$V-$S-$O; exit 0; }
+          DOCKER_BUILDKIT=1 docker build -t $P/builder:$V-$S-$O \
+            --build-arg BASE_IMAGE=$P/patched:$V-$S \
+            --build-arg TARGET_OS_LIST="${{ steps.cfg.outputs.oslist }}" \
+            tools/images/builder
+          docker push $P/builder:$V-$S-$O
+
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.gen.outputs.targets }}
+    steps:
+      - id: gen
+        run: |
+          OS="${{ github.event.inputs.target_os }}"
+          ARCH="${{ github.event.inputs.arch }}"
+          M='[]'
+          add() { M=$(jq -c ". += [{}]" <<<"$M"); M=$(jq -c "(.[-1] |= . + $1)" <<<"$M"); }
+          addt() { # name cpu outdir ninjatargets gnextra
+            add "{\"name\":\"$1\",\"cpu\":\"$2\",\"out\":\"$3\",\"ninja\":\"$4\",\"gn_extra\":$5}"
+          }
+          if [[ "$OS" == "android" || "$OS" == "all" ]]; then
+            [[ "$ARCH" == "arm64" || "$ARCH" == "all" ]] && \
+              addt "android-arm64" "arm64" "arm64" "chrome_public_bundle chrome_public_apk" '""'
+            [[ "$ARCH" == "arm"   || "$ARCH" == "all" ]] && \
+              addt "android-arm"   "arm"   "arm"   "chrome_public_bundle chrome_public_apk" '""'
+            [[ "$ARCH" == "x64"   || "$ARCH" == "all" ]] && \
+              addt "android-x64"   "x64"   "x64"   "chrome_public_bundle chrome_public_apk" '""'
+            addt "webview-arm64" "arm64" "arm64_webview" "system_webview_apk system_webview_shell" '"system_webview_package_name=\"com.android.webview\" enable_trybot_verification=false"'
+          fi
+          if [[ "$OS" == "linux" || "$OS" == "all" ]]; then
+            addt "linux-x64" "x64" "lin64" "chrome chrome_sandbox" '""'
+          fi
+          echo "targets={\"include\":$M}" >> $GITHUB_OUTPUT
+
+  build:
+    needs: [images, matrix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.targets) }}
+    steps:
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $IMAGE_REGISTRY -u ${{ github.actor }} --password-stdin
+
+      - name: Resolve starting image
+        env:
+          PREFIX: ${{ needs.images.outputs.prefix }}
+          V: ${{ needs.images.outputs.version }}
+          SHA7: ${{ needs.images.outputs.sha7 }}
+          NAME: ${{ matrix.name }}
+          RESUME: ${{ github.event.inputs.resume }}
+        run: |
+          SNAP=$PREFIX/builder:$V-$SHA7-snap-$NAME
+          BASE=$PREFIX/builder:$V-$SHA7-${{ needs.images.outputs.osltag }}
+          if [[ "$RESUME" == "true" ]] && docker manifest inspect $SNAP >/dev/null 2>&1; then
+            echo "Resuming from existing snapshot"
+            START=$SNAP
+          else
+            START=$BASE
+          fi
+          docker pull $START
+          docker tag $START work:$NAME
+          echo "SNAP=$SNAP" >> $GITHUB_ENV
+
+      - name: Prepare keystore
+        run: |
+          mkdir -p ksdata
+          printf '%s' "${{ secrets.KEYSTORE }}" > ks.asc
+          gpg --homedir ./ --batch --passphrase "${{ secrets.KEYSTORE_PASSPHRASE }}" -d ks.asc > ksdata/builder.keystore
+          rm ks.asc
+
+      - name: Start build container
+        env:
+          NAME: ${{ matrix.name }}
+          OUT: ${{ matrix.out }}
+        run: |
+          docker run -d --name bld-$NAME \
+            -v "$PWD/ksdata:/keys:ro" \
+            -e WORKSPACE=/workspace \
+            -e USE_KEYSTORE=1 \
+            -e KEYSTORE_PATH=/keys/builder.keystore \
+            -e KEYSTORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}' \
+            -e CROMITE_PREF_HASH_SEED_BIN='${{ secrets.CROMITE_PREF_HASH_SEED_BIN }}' \
+            -e TARGET_ISDEBUG='${{ github.event.inputs.debug }}' \
+            work:$NAME sleep infinity
+
+      # gn args order matters: target_os first (activates guards in cromite.gn_args),
+      # then the file's own args, then target_cpu/gn_extra last-wins.
+      # A watchdog commits+pushes the container every 45min so 6h-timeout kills
+      # resume from the last checkpoint instead of restarting.
+      - name: gn gen + ninja (${{ matrix.name }})
+        run: |
+          if [[ "${{ matrix.name }}" == linux-* ]]; then TOS=linux; else TOS=android; fi
+          RC=0
+          if [[ "${{ github.event.inputs.push_state }}" == "true" ]]; then
+            (
+              while true; do
+                sleep 2700
+                docker commit bld-${{ matrix.name }} $SNAP >/dev/null 2>&1 \
+                  && docker push $SNAP >/dev/null 2>&1 || true
+              done
+            ) &
+            WD=$!
+          fi
+          docker exec \
+            -e TOS=$TOS \
+            -e CPU='${{ matrix.cpu }}' \
+            -e OUT='${{ matrix.out }}' \
+            -e NINJA_TARGETS='${{ matrix.ninja }}' \
+            -e GN_EXTRA=${{ matrix.gn_extra }} \
+            bld-${{ matrix.name }} bash -exc '
+              export PATH=/workspace/chromium/src/third_party/llvm-build/Release+Asserts/bin:/workspace/depot_tools/:/usr/local/go/bin:/workspace/mtool/bin:$PATH
+              cd /workspace/chromium/src
+              gn gen --args="target_os = \"$TOS\" $(cat /workspace/repo/build/cromite.gn_args) target_cpu = \"$CPU\" $GN_EXTRA" out/$OUT
+              vpython3 /workspace/depot_tools/siso.py ninja -C out/$OUT $NINJA_TARGETS --offline
+              cp ../../repo/build/RELEASE out/$OUT/
+            ' || RC=$?
+          [[ -n "$WD" ]] && { kill $WD 2>/dev/null || true; wait $WD 2>/dev/null || true; }
+          exit $RC
+
+      # Opt-in host unit-test tier: builds small, patch-relevant suites for the
+      # linux target and runs them inside the same container. Expensive — only
+      # on demand (weekly security bumps may enable it).
+      - name: Unit-test tier (base, url)
+        if: ${{ github.event.inputs.unit_tests == 'true' && matrix.name == 'android-arm64' }}
+        run: |
+          docker exec bld-android-arm64 bash -exc '
+            export PATH=/workspace/chromium/src/third_party/llvm-build/Release+Asserts/bin:/workspace/depot_tools/:$PATH
+            cd /workspace/chromium/src
+            gn gen --args="target_os = \"linux\" $(cat /workspace/repo/build/cromite.gn_args) target_cpu = \"x64\" is_component_build = false" out/unit
+            vpython3 /workspace/depot_tools/siso.py ninja -C out/unit base_unittests url_unittests --offline
+            ./out/unit/base_unittests || exit $?
+            ./out/unit/url_unittests || exit $?
+          '
+
+      - name: Export artifacts
+        env:
+          NAME: ${{ matrix.name }}
+          OUT: ${{ matrix.out }}
+        run: |
+          mkdir -p artifacts
+          docker exec bld-$NAME bash -c "ls /workspace/chromium/src/out/$OUT/apks/ 2>/dev/null || true"
+          docker cp bld-$NAME:/workspace/chromium/src/out/$OUT/apks ./artifacts/apks-$NAME || true
+          docker cp bld-$NAME:/workspace/chromium/src/out/$OUT/RELEASE ./artifacts/RELEASE-$NAME || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: fluorite-${{ matrix.name }}
+          path: artifacts/
+
+      - name: Commit build state snapshot
+        if: ${{ github.event.inputs.push_state == 'true' }}
+        env:
+          NAME: ${{ matrix.name }}
+        run: |
+          docker commit bld-$NAME $SNAP
+          docker push $SNAP
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f bld-${{ matrix.name }} || true
+
+  # On any build failure (e.g. 6h timeout mid-train), re-dispatch once per
+  # attempt; resumed runs continue from the last watchdog checkpoint.
+  retry-relay:
+    needs: [build]
+    if: ${{ failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-dispatch with incremented attempt
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ATTEMPT: ${{ github.event.inputs.attempt || '0' }}
+        run: |
+          if (( ATTEMPT >= 3 )); then
+            echo "::error::giving up after $ATTEMPT resume attempts"
+            exit 1
+          fi
+          gh workflow run build-fluorite.yaml \
+            --ref ${{ github.ref_name }} \
+            -f sha='${{ github.event.inputs.sha }}' \
+            -f target_os='${{ github.event.inputs.target_os || 'android' }}' \
+            -f arch='${{ github.event.inputs.arch || 'all' }}' \
+            -f debug='${{ github.event.inputs.debug || 'false' }}' \
+            -f resume=true \
+            -f push_state=true \
+            -f unit_tests='${{ github.event.inputs.unit_tests || 'false' }}' \
+            -f attempt=$((ATTEMPT+1))

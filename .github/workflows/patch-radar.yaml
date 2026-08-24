@@ -1,0 +1,130 @@
+name: Patch Radar
+
+# Pre-flight breakage detection. Weekly: dry-run every patch against the NEWEST
+# Chromium stable major and report which patches will break BEFORE train day.
+#
+# Uses a blob-filtered partial clone + sparse-checkout of only patch-referenced
+# paths, so the whole check costs minutes instead of a full 25GB checkout.
+# Replaces the superpatch dependency entirely.
+
+on:
+  schedule:
+    - cron: '11 5 * * 3'  # Wednesdays, mid-week warning before Monday trains
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Determine next Chromium major
+        id: ver
+        run: |
+          CURRENT_MAJOR=$(cut -d. -f1 build/RELEASE)
+          NEXT=$(curl -fsSL \
+            'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=50' |
+            jq -r '.[].version' | sort -Vu | awk -F. -v cur="$CURRENT_MAJOR" '$1 > cur' | tail -1)
+          [[ -n "$NEXT" ]] || { echo "No newer major than $CURRENT_MAJOR — radar clear."; exit 0; }
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+          echo "Radar target: $NEXT (current: $CURRENT_MAJOR)"
+
+      - name: Partial clone chromium at ${{ steps.ver.outputs.next }}
+        if: steps.ver.outputs.next != ''
+        run: |
+          GIT_LFS_SKIP_SMUDGE=1 git clone \
+            --filter=blob:none --no-checkout --depth 1 \
+            --branch ${{ steps.ver.outputs.next }} \
+            https://chromium.googlesource.com/chromium/src.git chromium
+
+      - name: Sparse-checkout patch-referenced paths
+        if: steps.ver.outputs.next != ''
+        working-directory: chromium
+        run: |
+          # Collect every a/ or b/ path named in every patch; skip /dev/null.
+          : > /tmp/paths.txt
+          while read -r P; do
+            grep -hE '^(---|\+\+\+) ' "../build/patches/$P" \
+              | awk '{print $2}' \
+              | grep -v '/dev/null' \
+              | sed -E 's|^[ab]/||; s|\t.*$||' >> /tmp/paths.txt
+          done < ../build/cromite_patches_list.txt
+          sort -u /tmp/paths.txt -o /tmp/paths.txt
+          wc -l /tmp/paths.txt
+          git sparse-checkout init --no-cone
+          git sparse-checkout set --no-cone --stdin < /tmp/paths.txt
+          git checkout ${{ steps.ver.outputs.next }}
+
+      - name: Dry-run every patch
+        if: steps.ver.outputs.next != ''
+        id: scan
+        run: |
+          FAILED=()
+          TOTAL=0
+          while read -r P; do
+            case "$P" in *.patch) ;; *) continue;; esac
+            TOTAL=$((TOTAL+1))
+            if ! git -C chromium apply --check --whitespace=nowarn "build/patches/$P" 2>/tmp/err.txt; then
+              HUNKS=$(grep -c '^@@' "build/patches/$P" || echo '?')
+              FAILED+=("$P")
+              {
+                echo "### ❌ $P"
+                '```'
+                head -15 /tmp/err.txt
+                '```'
+              } >> $GITHUB_STEP_SUMMARY
+            fi
+          done < build/cromite_patches_list.txt
+
+          {
+            echo "## Patch radar — Chromium ${{ steps.ver.outputs.next }}"
+            echo ""
+            echo "**$TOTAL** patches scanned, **${#FAILED[@]}** predicted to fail."
+          } >> $GITHUB_STEP_SUMMARY
+
+          {
+            echo "count=${#FAILED[@]}"
+            echo "total=$TOTAL"
+            if [[ ${#FAILED[@]} -gt 0 ]]; then
+              echo "list<<EOF" >> $GITHUB_OUTPUT
+              printf '%s\n' "${FAILED[@]}" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            fi
+          } >> $GITHUB_OUTPUT
+
+      - name: Open or update radar issue
+        if: steps.ver.outputs.next != '' && steps.scan.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Patch radar: ${{ steps.scan.outputs.count }} patch(es) break on ${{ steps.ver.outputs.next }}"
+          BODY=$(cat <<EOF
+          Predicted patch failures against Chromium \`${{ steps.ver.outputs.next }}\`
+          (\`${{ steps.scan.outputs.count }}/${{ steps.scan.outputs.total }}\` of the stack).
+
+          Fix these **before** the next train picks this major:
+
+          ${{ steps.scan.outputs.list }}
+
+          Each entry links to the radar run above with exact reject reasons.
+          EOF
+          )
+          EXISTING=$(gh issue list --state open --search "Patch radar in:title" --json number --jq '.[0].number' || true)
+          if [[ -n "$EXISTING" ]]; then
+            gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Radar clear — close stale issue
+        if: steps.ver.outputs.next == '' || steps.scan.outputs.count == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list --state open --search "Patch radar in:title" --json number --jq '.[0].number' || true)
+          [[ -n "$EXISTING" ]] && gh issue close "$EXISTING" -c "Radar clear — all patches apply." || true
