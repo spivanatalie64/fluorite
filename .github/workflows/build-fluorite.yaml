@@ -126,6 +126,7 @@ jobs:
           ./regctl image inspect $P/chromium:$V >/dev/null 2>&1 && { docker pull $P/chromium:$V; exit 0; }
           DOCKER_BUILDKIT=1 docker build -t $P/chromium:$V \
             --build-arg BASE_IMAGE=$P/build-deps:$V \
+            --build-arg VERSION=$V \
             --build-arg TARGET_OS_LIST="${{ steps.cfg.outputs.oslist }}" \
             repo/tools/images/chromium
           docker push $P/chromium:$V
