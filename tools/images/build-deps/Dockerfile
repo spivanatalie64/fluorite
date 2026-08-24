@@ -16,7 +16,7 @@ RUN if command -v pacman >/dev/null 2>&1; then \
       pacman-key --init 2>/dev/null || true; \
       pacman -Syu --noconfirm --needed \
         base-devel git curl wget rsync unzip zip tar xz jq which file \
-        dos2unix wiggle python python-setuptools jdk-openjdk sudo; \
+        dos2unix python python-setuptools jdk-openjdk sudo; \
     fi
 
 # ---- Debian/Ubuntu fallback path -------------------------------------------
