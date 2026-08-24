@@ -15,6 +15,17 @@ cd $SRC_DIR
 
 # Flatten submodule gitdirs so `git am` sees one tree; keeps patch application
 # working across repos that Chromium vendors as submodules.
+# Commit via plumbing: porcelain `git commit` carries a stale-shallow-file
+# guard that false-trips when successive flatten commits rewrite .git/shallow
+# in this --no-history checkout. Plumbing bypasses it.
+commit_plumbing() {
+  local msg=$1
+  local tree commit
+  tree=$(git write-tree)
+  commit=$(printf '%s\n' "$msg" | git commit-tree "$tree" -p HEAD)
+  git update-ref -m fluorite HEAD "$commit"
+}
+
 flatten_submodule() {
   local path=$1
   echo -e "${RED} ------- flatten $path ${NC}"
@@ -25,7 +36,7 @@ flatten_submodule() {
   rm -rf $path
   mv ${path}-bis $path
   git add -f $path > /dev/null
-  git commit -m ":NOEXPORT: flatten subrepo $path" > /dev/null
+  commit_plumbing ":NOEXPORT: flatten subrepo $path"
 }
 
 git config user.email "build@example.com"
@@ -46,7 +57,12 @@ echo
 echo -e "${RED} ------- apply patches ${NC}"
 # Strict first (git am), fuzz fallback second (patch --fuzz) so context-line
 # drift self-heals; only genuine semantic conflicts stop the build.
+# The shallow-file guard can also false-trip `git am` right after the flatten
+# commits rewrote .git/shallow; one `git status` forces a clean re-read first,
+# and the fuzz fallback's commit uses plumbing like flatten does.
 : > /workspace/patches_applied_with_fallback.txt
+git status > /dev/null 2>&1 || true
+
 for file in $(cat $PATCH_LIST) ; do
    if [[ "$file" == *".patch" ]]; then
     echo -e "${RED}  -> Apply $file ${NC}"
@@ -61,7 +77,7 @@ for file in $(cat $PATCH_LIST) ; do
     echo -e "\033[0;33m     clean apply failed, retrying with fuzz ${NC}"
     if git apply --p=1 --fuzz=10 --whitespace=nowarn $PATCH_DIR/$file; then
       git add -A
-      git commit -m "$(basename $file)" > /dev/null
+      commit_plumbing "$(basename $file)"
       echo "$file" >> /workspace/patches_applied_with_fallback.txt
     else
       echo -e "Error applying $PATCH_DIR/$file"
