@@ -78,6 +78,8 @@ cd $WORKSPACE/
 git clone https://github.com/ninja-build/ninja.git -b v1.8.2
 cd ninja
 git apply $REPO_DIR/tools/ninja-one-target-for-compdb.patch
+# py3.13+ removed the pipes module; shlex.quote is the same function
+sed -i 's/^import pipes$/import shlex as pipes/' configure.py
 CXX=clang++ ./configure.py --bootstrap
 mv $WORKSPACE/ninja/ninja $WORKSPACE/ninja/ninja-modified || true
 
