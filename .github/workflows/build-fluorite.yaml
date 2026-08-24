@@ -57,6 +57,9 @@ env:
   IMAGE_REGISTRY: ghcr.io
   RAW_OWNER: ${{ github.repository_owner }}
   DEBUG_FLAG: ${{ github.event.inputs.debug }}
+  # Swap distros (e.g. a future AcreetionOS-published image) here; every
+  # install path in the image chain detects pacman vs apt automatically.
+  BUILD_BASE_IMAGE: docker.io/library/archlinux:base-devel
 
 jobs:
   images:
@@ -110,6 +113,7 @@ jobs:
           docker pull $IMG && exit 0
           ./regctl image inspect $IMG >/dev/null 2>&1 && { docker pull $IMG; exit 0; }
           DOCKER_BUILDKIT=1 docker build -t $IMG \
+            --build-arg BASE_IMAGE=$BUILD_BASE_IMAGE \
             --build-arg VERSION=${{ steps.cfg.outputs.version }} \
             --no-cache repo/tools/images/build-deps
           docker push $IMG

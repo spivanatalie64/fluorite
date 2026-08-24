@@ -15,7 +15,11 @@ PATH=$WORKSPACE/chromium/src/third_party/llvm-build/Release+Asserts/bin:$WORKSPA
 
 has_target() { echo " $TARGET_OS_LIST " | grep -q " $1 "; }
 
-sudo apt-get update && sudo apt-get install -y lsof libgoogle-glog-dev parallel golang-go
+if command -v pacman >/dev/null 2>&1; then
+  sudo pacman -Syu --noconfirm --needed lsof parallel go
+else
+  sudo apt-get update && sudo apt-get install -y lsof libgoogle-glog-dev parallel golang-go
+fi
 
 echo -e "${RED} -------- download mtool ${NC}"
 cd $WORKSPACE
