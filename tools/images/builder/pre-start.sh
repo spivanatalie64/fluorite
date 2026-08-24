@@ -25,6 +25,9 @@ echo -e "${RED} -------- download mtool ${NC}"
 cd $WORKSPACE
 git clone https://github.com/bromite/mtool
 cd mtool
+# repo predates Go modules; synthesize a module so modern toolchains build it
+go mod init mtool
+go mod tidy
 make
 cd ..
 
