@@ -25,8 +25,10 @@ echo -e "${RED} -------- download mtool ${NC}"
 cd $WORKSPACE
 git clone https://github.com/bromite/mtool
 cd mtool
-# repo predates Go modules; synthesize a module so modern toolchains build it
+# repo predates Go modules; synthesize one and rewrite its relative
+# import ("./getopt") to the module path — module mode forbids relatives
 go mod init mtool
+grep -rl '"\./getopt"' . --include='*.go' | xargs -r sed -i 's|"\./getopt"|"mtool/getopt"|g'
 go mod tidy
 make
 cd ..
