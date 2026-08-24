@@ -44,6 +44,7 @@ jobs:
       - id: pick
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           RID="${{ github.event.inputs.run_id || github.event.workflow_run.id }}"
           if [[ -z "$RID" ]]; then

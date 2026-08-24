@@ -124,6 +124,7 @@ jobs:
       - name: Flip release to latest/stable
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release edit "${{ needs.publish.outputs.tag }}" \
             --latest --prerelease=false \

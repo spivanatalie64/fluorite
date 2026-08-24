@@ -114,6 +114,7 @@ jobs:
       - name: Prune old snap-* image versions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           OWNER_LC: ${{ github.repository_owner }}
         run: |
           OWNER_LC=$(echo "$OWNER_LC" | tr '[:upper:]' '[:lower:]')
