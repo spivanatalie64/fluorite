@@ -3,23 +3,23 @@
 Please refer to [official Chromium build documentation](https://www.chromium.org/developers/how-tos/get-the-code) to get started on how to build Chromium.
 
 The Chromium version tag used as base for the patches is available here: [RELEASE](../build/RELEASE); this is corresponding to the git tag for every release.
-The GN args used to build Cromite are available here: [cromite.gn_args](../build/cromite.gn_args).
-The patches are to be applied second the order specified in the `cromite_patches_list.txt` file (you can use `git am`).
+The GN args used to build Fluorite are available here: [cromite.gn_args](../build/cromite.gn_args).
+The patches are to be applied in the order specified in the `cromite_patches_list.txt` file (you can use `git am`).
 
 A complete, ready-to-build docker image is also available.
 Each release contains the description reference containing the name of the corresponding docker image. All images are in the format:
 
-`uazo/cromite-build:(VERSION)-(COMMIT)`
+`ghcr.io/spivanatalie64/fluorite/builder:(VERSION)-(COMMIT)`
 
-You can see all the images released in https://hub.docker.com/r/uazo/cromite-build/tags
+You can see all the images released in the GitHub Container Registry.
 
 This is the list of commands to perform a build:
 
 Given:
 ```
-SHA=fac696b3a422f196f698e6543913946ddaba1ef3
-VERSION=122.0.6261.111
-CHVERSION=uazo/cromite-build:$VERSION-$SHA
+SHA=5f0a9ac1...
+VERSION=148.0.7778.168
+CHVERSION=ghcr.io/spivanatalie64/fluorite/builder:$VERSION-$SHA
 CONTAINER=dev1
 BDEBUG=false
 ```
