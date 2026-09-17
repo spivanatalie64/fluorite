@@ -1,0 +1,22 @@
+From: Carmelo Messina <carmelo.messina@outlook.com>
+Date: Thu, 21 Oct 2021 09:09:56 +0200
+Subject: Enable Android Backup
+
+Enables Android Key/Value backup for Chrome by passing backup_key
+to the AndroidManifest.xml jinja template. The backup agent
+(ChromeBackupAgentImpl.java) is included in the build via
+chrome_java_sources.gni.
+
+---
+ chrome/android/chrome_public_apk_tmpl.gni | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/chrome/android/chrome_public_apk_tmpl.gni b/chrome/android/chrome_public_apk_tmpl.gni
+--- a/chrome/android/chrome_public_apk_tmpl.gni
++++ b/chrome/android/chrome_public_apk_tmpl.gni
+@@ -10,4 +10,5 @@ default_chrome_public_jinja_variables = [
+   "enable_dav1d_decoder=$enable_dav1d_decoder",
+   "enable_jxl_decoder=$enable_jxl_decoder",
+   "zygote_preload_class=org.chromium.content_public.app.ZygotePreload",
++  "backup_key=unused" # see https://developer.android.com/guide/topics/data/keyvaluebackup#BackupManifest
+ ]

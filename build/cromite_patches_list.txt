@@ -230,6 +230,7 @@ Allow-DocumentPiP-if-PopupsAndRedirects-are-active.patch
 allow-the-download-of-clang-for-windows-crossbuild.patch
 Add-option-to-disable-snapshots.patch
 Enable-Android-Dynamic-Performance-Framework.patch
+Enable-android-backup.patch
 Fix-crash-on-customize-profile-ui.patch
 Enable-ImprovedBookmarks-by-default.patch
 Partition-MediaDeviceId-by-default.patch
