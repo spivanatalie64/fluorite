@@ -75,7 +75,7 @@ for file in $(cat $PATCH_LIST) ; do
     git am --abort
 
     echo -e "\033[0;33m     clean apply failed, retrying with fuzz ${NC}"
-    if git apply --p=1 --fuzz=10 --whitespace=nowarn $PATCH_DIR/$file; then
+    if git apply -p1 --fuzz=10 --whitespace=nowarn $PATCH_DIR/$file; then
       git add -A
       commit_plumbing "$(basename $file)"
       echo "$file" >> /workspace/patches_applied_with_fallback.txt
