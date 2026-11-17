@@ -8,9 +8,7 @@ name: Patch Radar
 # Replaces the superpatch dependency entirely.
 
 on:
-  schedule:
-    - cron: '11 5 * * 3'  # Wednesdays, mid-week warning before Monday trains
-  workflow_dispatch:
+  workflow_dispatch:  # manual only since 2026-11-17 -- radar serves deliberate feature jumps; automatic updates are security-only
 
 permissions:
   contents: read
