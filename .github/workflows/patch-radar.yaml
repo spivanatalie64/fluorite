@@ -74,9 +74,9 @@ jobs:
               FAILED+=("$P")
               {
                 echo "### ❌ $P"
-                '```'
+                echo '```'
                 head -15 /tmp/err.txt
-                '```'
+                echo '```'
               } >> $GITHUB_STEP_SUMMARY
             fi
           done < build/cromite_patches_list.txt
