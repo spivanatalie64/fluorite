@@ -1,0 +1,90 @@
+name: Security Layer
+
+# Security updates ONLY, as their own layer. Weekly check: has Chromium
+# published a newer point release inside the major version Fluorite is
+# already pinned to (e.g. 158.0.8127.36 -> 158.0.8127.41)? Point releases
+# are security refreshes -- no feature changes. If one exists, build/RELEASE
+# is bumped to it, a tracking issue is opened/updated, and the build is
+# dispatched. A newer MAJOR (a feature update) is never touched here:
+# feature jumps are deliberate, manual decisions (see security-watch.yaml).
+
+on:
+  schedule:
+    - cron: '37 4 * * 1'  # Mondays ~04:37 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  security-layer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Find the newest security refresh inside our major
+        id: sec
+        run: |
+          CURRENT=$(tr -d '[:space:]' < build/RELEASE)
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          ALL=$(curl -fsSL \
+            'https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Android&num=50' |
+            jq -r '.[].version' | sort -Vu)
+          LATEST=$(grep "^$MAJOR\." <<<"$ALL" | sort -V | tail -1)
+          echo "current=$CURRENT"
+          echo "latest-in-major=$LATEST"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [[ -n "$LATEST" && "$LATEST" != "$CURRENT" && "$(printf '%s\n%s\n' "$CURRENT" "$LATEST" | sort -V | tail -1)" == "$LATEST" ]]; then
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            echo "No security refresh available. Nothing to do."
+          fi
+
+      - name: Bump build/RELEASE to the security refresh
+        if: steps.sec.outputs.update == 'true'
+        env:
+          LATEST: ${{ steps.sec.outputs.latest }}
+        run: |
+          echo "$LATEST" > build/RELEASE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build/RELEASE
+          git commit -m "Security update: $LATEST"
+          git push
+
+      - name: Open or update the security tracking issue
+        if: steps.sec.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LATEST: ${{ steps.sec.outputs.latest }}
+          CURRENT: ${{ steps.sec.outputs.current }}
+        run: |
+          TITLE="Security update: $LATEST"
+          BODY=$(cat <<EOF
+          Chromium \`$LATEST\` is a security refresh inside the major Fluorite already tracks (\`$CURRENT\` -> \`$LATEST\`). No feature changes.
+
+          build/RELEASE has been bumped by the Security Layer and the build pipeline dispatched automatically. Edit this issue to track any patches that fail to apply.
+          EOF
+          )
+          EXISTING=$(gh issue list --state open --search "Security update in:title" --json number --jq '.[0].number' || true)
+          if [[ -n "$EXISTING" ]]; then
+            gh issue edit "$EXISTING" --title "$TITLE" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
+
+      - name: Dispatch the build
+        if: steps.sec.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run build-fluorite.yaml \
+            --ref ${{ github.ref_name }} \
+            -f target_os=android -f arch=all -f debug=false \
+            -f resume=true -f push_state=true
