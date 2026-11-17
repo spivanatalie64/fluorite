@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: Hn7Pny25GmGmlYN1F0PfDg
-! Version: 202608230332
+! Checksum: RmA3KLykCAqUzvyC5Q9bNw
+! Version: 202611171223
 ! Title: Turkish Filters
-! Last modified: 23 Aug 2026 03:32 UTC
+! Last modified: 17 Nov 2026 12:23 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://gitlab.com/eyeo/filterlists/turkishfilters
 ! Licence: https://gitlab.com/eyeo/filterlists/turkishfilters/-/blob/main/LICENSE
@@ -275,7 +275,7 @@ mynet.com##.col-adv
 havadiskibris.com##.col-el
 bursahayat.com.tr##.container-md
 bbnhaber.com.tr##.container.banner.banner-wide
-dizipal*.com##.containerAds
+dizipal.com##.containerAds
 myburc.com##.d-block[style="height:280px;"]
 serimanga.com##.d-flex
 beinsports.com.tr##.d-flex:has(> div[id*="-gpt-ad"])

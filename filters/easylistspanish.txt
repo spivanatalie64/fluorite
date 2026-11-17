@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: /H0H7trafznrdbge3uc/6Q
-! Version: 202608230332
+! Checksum: cSZWwiVocYXmb4noonpCsQ
+! Version: 202611171223
 ! Title: EasyList Spanish
-! Last modified: 23 Aug 2026 03:32 UTC
+! Last modified: 17 Nov 2026 12:23 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://easylist.to/
 ! Licence: https://easylist.to/pages/licence.html
@@ -442,6 +442,7 @@ hitfm.es#@#.publi
 ||arquimaster.com.ar/Images/banners.htm
 ||artesacro.org/imagenes/baner_
 ||atacamaenlinea.cl/wp-content/uploads/*/banner_caserones_
+||carrefour.es/cloud-api/recommenders/v1/web_citrus_search
 ||cine24h.net/Banners/
 ||cinetux.nu/api/spots/
 ||clivertv.xyz/assets/img/suscripcion.png
@@ -1093,7 +1094,7 @@ falabella.com###sponsored-strip-container
 avisosdeocasion.com###srcpublicidadhub
 tvazteca.com###stickyDiv
 elespanol.com###sticky_container
-diariolibre.com###stickyunit
+diariolibre.com,elmanana.com###stickyunit
 lacuerda.net###t_diag
 laiguana.tv###tdi_139
 laiguana.tv###tdi_154
@@ -1149,6 +1150,7 @@ arbolabc.com##.ad-leaderboard-row
 elotrolado.net##.ad-lg
 futuro.cl##.ad-mob
 ellitoral.com##.ad-slot-background
+elmanana.com##.ad-unit-leaderboard
 elmanana.com.mx##.ad-zone
 bandaancha.eu##.adMbBlTp
 atresplayer.com##.adWrapper-content-position
@@ -1217,6 +1219,8 @@ gasteizhoy.com##.banclick
 lesportiudecatalunya.cat##.banerpromocio
 0221.com.ar,24con.com,agenciafe.com,agritotal.com,alicanteplaza.es,altonivel.com.mx,ambito.com,bienbonita.com,busqueda.com.uy,c5n.com,castellonplaza.com,cronista.com,diario.mx,diarioelargentino.com,diariohoy.net,diariolasamericas.com,diariolaverdad.com.ar,diariolibre.com,diariopopular.com.ar,donbalon.com,econojournal.com.ar,elancasti.com.ar,eldiariodechihuahua.mx,eldiariodelarepublica.com,eldiarionuevodia.com.ar,eldiariony.com,eleconomista.com.mx,eleconomista.net,elgrafico.com,elimparcial.com,ella.sv,ellas.pa,elnacional.com,elonce.com,elpatagonico.com,elplural.com,estadiodeportes.mx,guarda14.com,hispasonic.com,impulsobaires.com.ar,infocanuelas.com,informador.mx,lacuarta.com,laopinion.com,lapoliticaonline.com,laprensagrafica.com,laraza.com,laverdadnoticias.com,lavoz.com.ar,letrap.com.ar,losandes.com.ar,masgamers.com,mdzol.com,minutouno.com,motor.com.co,nuevodiarioweb.com.ar,observador.cr,periodicocorreo.com.mx,pilaradiario.com,puntal.com.ar,realpolitik.com.ar,rpp.pe,sputniknews.lat,t13.cl,tiempodesanjuan.com,tntsports.cl,tntsports.com.ar,tornquistdistrital.com.ar,tvynovelas.com,valenciaplaza.com,viapais.com.ar,welife.es,zamora24horas.com##.banner
 naiz.eus##.banner--article
+quadratin.com.mx##.banner--cinturon1
+quadratin.com.mx##.banner--faro
 iprofesional.com##.banner-2
 freepik.es##.banner-adobe
 clarin.com,ole.com.ar##.banner-border
@@ -1224,7 +1228,7 @@ agroclave.com.ar,cronica.com.ar,diariodecuyo.com.ar,lacapital.com.ar,unoentrerio
 elnueve.com.ar##.banner-box-container
 noticiasurbanas.com.ar##.banner-center
 concierto.cl##.banner-cms
-ambito.com,eldiariodelapampa.com.ar,elpuntodeequilibrio.com,minutouno.com,revistacar.es##.banner-container
+ambito.com,codigoqro.mx,eldiariodelapampa.com.ar,elpuntodeequilibrio.com,imagendeveracruz.mx,minutouno.com,revistacar.es##.banner-container
 poketvlatino.com##.banner-fijo
 soychile.cl##.banner-fixed-container
 puntal.com.ar##.banner-flex
@@ -1243,7 +1247,7 @@ anbariloche.com.ar,anroca.com.ar,elcordillerano.com.ar,elterritorio.com.ar,notic
 eltrecetv.com.ar##.banner-swap
 clarin.com,hispasonic.com,zocalo.com.mx##.banner-top
 miradorprovincial.com##.banner-top-home-mp
-ciudad.com.ar,elcomercio.com,hazteveg.com,lmcipolletti.com,lmneuquen.com##.banner-wrapper
+ciudad.com.ar,codigoqro.mx,elcomercio.com,hazteveg.com,lmcipolletti.com,lmneuquen.com##.banner-wrapper
 diariodelaribera.net##.bannerColumnas
 metrolatam.com##.bannerContent
 eleconomista.es##.bannerInferior
@@ -1264,6 +1268,7 @@ diarioresponsable.com,elinformador.com.co,elwebdelmirall.net,lancelotdigital.com
 lancelotdigital.com##.bannerheader
 telesurtv.net##.banners
 eleconomista.es##.banners-superiores2
+diariodelistmo.com,imagendelgolfo.mx,imagendeveracruz.mx##.bannersaas
 iproup.com##.bannerwide
 europa-agricola.es,via-mobilis.es##.banniere
 falabella.com##.bannner-styles
@@ -1294,12 +1299,13 @@ mariskalrock.com##.brave_popup
 terremoto.mx##.break_patrocinadores
 versionfinal.com.ve##.bsac
 futbolred.com##.btn_betplay
+beteve.cat##.btv-publicitat-container
 plantadoce.com##.bwe_ext_partners
 cope.es,diariodecastillayleon.es,diariodeleon.es,diariodevalladolid.es,elcorreodeburgos.com,eleconomista.com.mx,eltiempo.com,heraldodiariodesoria.es,miarevista.es,portafolio.co,segre.com,serpadres.es##.c-add
 eltiempo.com##.c-add--no-text
 cope.es##.c-add-teads
 eldebate.com##.c-add-wall
-atlanticohoy.com,cocheglobal.com,diario16plus.com,elnacional.cat,hibridosyelectricos.com,huleymantel.com,planetarealmadrid.com,zamora24horas.com##.c-banner
+atlanticohoy.com,cocheglobal.com,diario16plus.com,diariodemorelos.com,elnacional.cat,hibridosyelectricos.com,huleymantel.com,planetarealmadrid.com,zamora24horas.com##.c-banner
 elpais.com##.c-bra
 elpais.com##.c-brr
 cadenaser.com##.c-p-ia
@@ -1313,6 +1319,8 @@ encancha.cl##.cl-adzone-ctn
 diariobitcoin.com##.clickout-banner-regular_native_box
 vivanolamag.com##.client-logo-slider
 eltiempo.es##.cls-publi-height
+carrefour.es##.cms-citrus-flagship
+carrefour.es##.cms-citrus-product
 atomix.vg,bembibredigital.com,cinemitas.org,comedera.com,economiadigital.es,elprofe20.com,elrellano.com,estacaonegocios.com,finanzas.com,finofilipino.org,gatewayhispanic.com,intercambiosvirtualeshd.org,mejoresmodsminecraft.site,periodismodelmotor.com,radiocre.com,stonkstutors.com,tresubresdobles.com,valoraanalitik.com,washingtonhispanic.com##.code-block
 campoindustria.com,diariomovil.info,eldiadehigueras.com.ar##.codigo-html
 ciudadccs.info##.col-sm-9
@@ -1543,8 +1551,11 @@ azarplus.com##.publicidad-debajo-del-menu
 puntobiz.com.ar##.publicidad-line
 record.com.mx##.publicidadBoxBanner300x75
 contextotucuman.com##.publicidadTop
+posta.com.mx##.publicidad_ads
+posta.com.mx##.publicidad_ads_box1
 0221.com.ar##.publicidad_cont
 eldesmarque.com##.publicidad_marca
+posta.com.mx##.publicidad_posta
 elpuntavui.cat,leconomic.cat,lesportiudecatalunya.cat##.publicitat
 alfabeta.net##.publimg
 argenports.com##.publis300-ajax-container
@@ -1584,6 +1595,7 @@ forbes.com.mx##.set__ads--component
 diarioelnorte.com.ar,lagaceta.com.ec,portalpuentealto.cl##.sgpb-popup-dialog-main-div-wrapper
 diarioelnorte.com.ar,lagaceta.com.ec##.sgpb-popup-overlay
 portalpuentealto.cl##.sgpb-theme-1-overlay
+codigoqro.mx##.sidebar-banner
 cooljuegos.com##.sidebar-game
 motor.elpais.com##.site-header__publicidad
 emporda.info##.sk--branded-content
@@ -1597,6 +1609,7 @@ prensa.com##.sliderPrensa
 elotrolado.net##.sliderxl
 abchoy.com.ar##.sm-wrapper
 lateja.cr,nacion.com##.small-promo
+codigoqro.mx##.soft-news-banner
 latercera.com##.spm
 capitalmedia.mx,contentlab-publimetro.com##.sponsor
 hispanidad.com,maximaonline.com.ar##.sponsored
@@ -1702,6 +1715,7 @@ eldiariodelfindelmundo.com##.zona_banners
 elnuevoherald.com##.zone
 lr21.com.uy##.zone-adsense
 notife.com##[class^="SectionAdvertising_"]
+mediamarkt.es##[data-test="mms-search-main"] > aside[aria-label*="atrocin"]
 europafm.com,ondacero.es##[data-type="ads"]
 carrefour.es##[id*="-sponsored_products-"]
 walmart.com.mx##[id*="SponsoredProductCarousel"]
@@ -1747,6 +1761,7 @@ rionegro.com.ar##ads-component
 lasexta.com##aside[class^="mod-ad-"]
 computerhoy.com##div[class*="containerAdSlot"]
 diariodecuyo.com.ar##div[class*="dfp-async"]
+elmanana.com##div[class*="template-publicidad-"]
 americatv.com.pe##div[class^="AdsSlot_"]
 autosusados.cl##div[class^="Autofact_"]
 autosusados.cl##div[class^="InterestingSection_"]
@@ -1776,6 +1791,7 @@ lasestrellas.tv,televisa.com##div[data-widget-type="ADVERTISEMENT"]
 tudn.com,univision.com##div[data-widget-type="Advertisement"]
 eleconomista.es##div[id^="300x"]
 eleconomista.es##div[id^="728x"]
+elclasificado.com##div[id^="ELC_D_"]
 actualidadradio.com##div[id^="actua-"]
 almomento.net##div[id^="almom-"]
 eldesmarque.com##div[id^="banner_"]
@@ -1865,6 +1881,8 @@ forocoches.com##section[style="min-width: 300px; height: 640px"]
 dataclave.com.ar,dobleamarilla.com.ar,eqsnotas.com,rosarioplus.com##tadevel-ad
 cine.com##td[style^="height:90px; width:970px;"]
 ! top-level domain wildcard
+mercadolibre.*##.bads-banner-header
+mercadolibre.*##.brand-ads-desktop__container
 atrapalo.*##.mega-advert
 atrapalo.*##.robahome
 forocoches.com###sidebar > div > section:has(.fixed_adslot)
@@ -1881,16 +1899,21 @@ hdfulldominios.com##.hidden.md\:block:has(a[href^="https://winpot-casino.org"])
 leroymerlin.es##.l-resultsList__item:has(.kl-blade--sponsored)
 eltiempo.com##.main-article-container-patr:has(.contenido-comercial)
 eldiariony.com,laopinion.com,laraza.com##.module--external:has-text(Contenido Patrocinado)
+carrefour.es##.product-card-list__item:has(.sponsor-product-label-default)
 leroymerlin.es##.product-thumbnail:has(.o-thumbnail__sponsored)
 elcorteingles.es##.products_list-item:has(.retail-media-promotion-badge)
 atlantico.net,laregion.es##.recirculation:has-text(Contenido patrocinado)
 expansion.com##.ue-l-article__secondary-column-item.ue-l-article--grow:has(.ue-c-ad)
 mercadolibre.cl,mercadolibre.co.cr,mercadolibre.com.ar,mercadolibre.com.bo,mercadolibre.com.co,mercadolibre.com.do,mercadolibre.com.ec,mercadolibre.com.gt,mercadolibre.com.hn,mercadolibre.com.mx,mercadolibre.com.ni,mercadolibre.com.pa,mercadolibre.com.pe,mercadolibre.com.py,mercadolibre.com.sv,mercadolibre.com.uy,mercadolibre.com.ve##.ui-recommendations-carousel-wrapper-ref:has(a[rel="nofollow, sponsored"])
 mediamarkt.es##[data-test="mms-product-card"]:has([data-test="mms-plp-sponsored"])
+mediamarkt.es##[data-test="mms-search-srp-productlist"] li:has(> aside[aria-label*="atrocin"])
+mediamarkt.es##[data-test="mms-search-srp-productlist"] li:has(> div:only-child:empty)
+mediamarkt.es##[data-test="mms-search-srp-productlist"] li:has(article[data-test="mms-cofr-product-card"] button[aria-label*="atrocin"])
 super.walmart.com.mx##[style^="will-change"]:has(#ITEM-BuyBoxAd-top)
 mediamarkt.es##aside[class="sc-a2fcee8-0 fmYGst"]:has(button[aria-label="Obtenga más información sobre el patrocinio de productos"])
 independentespanol.com##div:has(> div > div[data-tile-name="sidebar1"])
 hobbyconsolas.com##div[class^="embed-card_card_"]:has(a[href^="http://disneyplus.bn5x.net/"])
+elcorteingles.es##li.products_list-item:has(.retail-media_product, .retail-media_display)
 mercadolibre.cl,mercadolibre.co.cr,mercadolibre.com.ar,mercadolibre.com.bo,mercadolibre.com.co,mercadolibre.com.do,mercadolibre.com.ec,mercadolibre.com.gt,mercadolibre.com.hn,mercadolibre.com.mx,mercadolibre.com.ni,mercadolibre.com.pa,mercadolibre.com.pe,mercadolibre.com.py,mercadolibre.com.sv,mercadolibre.com.uy,mercadolibre.com.ve##li.ui-search-layout__item:has(div.ui-search-item__pub-container)
 mediamarkt.es##li[data-index-number]:has(button[aria-label="Obtenga más información sobre el patrocinio de productos"])
 leroymerlin.es##li[id^="maxarea-slide-"]:has([data-st-name="sponsored"])
@@ -1907,6 +1930,7 @@ elespectador.com#?#.Block:has(.Title_section:has-text(Contenido patrocinado))
 elespectador.com#?#.Card:has(.Card-Section.Section:has-text(Contenido patrocinado))
 elquindiano.com,laboyanos.com#?#span:has-text(PUBLICIDAD)
 eltiempo.com#?#.main-article-container-patr:has(.mas-contenido:has-text(Más Contenido))
+eltiempo.es#?#.container:has-text(Ofrecido por)
 falabella.com#?#.products-carousel-wrapper:has-text(Patrocinado)
 hoy.com.do#?#span:has-text(Publicidad)
 juegosdiarios.com#?#.display-ads:has(>span:has-text(Anuncio))
