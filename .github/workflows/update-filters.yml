@@ -19,7 +19,7 @@ jobs:
       - name: Checkout main branch
         uses: actions/checkout@v2
         with:
-          repository: 'uazo/cromite'
+          repository: 'spivanatalie64/fluorite'
           path: main
           fetch-depth: 1
 
@@ -29,11 +29,10 @@ jobs:
       - name: Checkout pages branch
         uses: actions/checkout@v2
         with:
-          repository: 'uazo/cromite'
+          repository: 'spivanatalie64/fluorite'
           ref: pages
           path: pages
           fetch-depth: 1
-          token: ${{ secrets.PAGE_PUBLISH }}
 
       # -------------------------------
       # Prepare output directory
@@ -106,4 +105,4 @@ jobs:
 
           git commit -m "Update filters ($(date -u))"
 
-          git push https://x-access-token:${{ secrets.PAGE_PUBLISH }}@github.com/uazo/cromite.git HEAD:pages
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/spivanatalie64/fluorite.git HEAD:pages
