@@ -1,14 +1,11 @@
 name: Security Watch
 
-# Weekly check for new Chromium stable releases. Security-updates-only policy:
-# we always track the latest stable tag. If build/RELEASE is behind, a tracking
-# issue is opened/updated and the build pipeline is dispatched automatically.
-# The job exits immediately when nothing to do.
+# MANUAL feature-train tool. Since 2026-11-17 this workflow has no schedule:
+# feature (major version) builds are deliberate decisions, fired by hand.
+# Automatic updates are security-only and live in security-layer.yaml.
 
 on:
-  schedule:
-    - cron: '37 4 * * 1'  # Mondays ~04:37 UTC
-  workflow_dispatch:
+  workflow_dispatch:  # manual only since 2026-11-17 -- feature trains are deliberate; automatic security bumps live in security-layer.yaml
 
 permissions:
   contents: read
