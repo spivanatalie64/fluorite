@@ -54,6 +54,7 @@ jobs:
           if [[ -z "$LAST_DATE" ]]; then
             echo "No prior releases; treating as first train."
             echo "FIRST_TRAIN=true" >> $GITHUB_ENV
+            echo "TARGET=$NEXT_MAJOR" >> $GITHUB_ENV
             exit 0
           fi
           DAYS=$(( ($(date +%s) - $(date -d "$LAST_DATE" +%s)) / 86400 ))
