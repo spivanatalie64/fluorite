@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: E0scmvsz4C7Z/xDEkWQk5Q
-! Version: 202611171223
+! Checksum: aHZB5MqDTrbmDRQSXd6qbw
+! Version: 202611190303
 ! Title: Fanboy's Notifications Blocking List
-! Last modified: 17 Nov 2026 12:23 UTC
+! Last modified: 19 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! License: http://creativecommons.org/licenses/by/3.0/
 ! Please report any unblocked content or problems by email or in our forums

@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: 2KK3D2vy2BeQLa6N7f+JFA
-! Version: 202611171223
+! Checksum: K3JNJq6i6bbLqkBtGcdI5g
+! Version: 202611190303
 ! Title: ROList
-! Last modified: 17 Nov 2026 12:23 UTC
+! Last modified: 19 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://www.zoso.ro/rolist/
 !

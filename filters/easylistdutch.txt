@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: dgRMpSleOD+pjF8gvKyD3w
-! Version: 202611171223
+! Checksum: GVw320qCwerU+kE/hZm73Q
+! Version: 202611190303
 ! Title: EasyList Dutch
-! Last modified: 17 Nov 2026 12:23 UTC
+! Last modified: 19 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://easylist.to/
 !
