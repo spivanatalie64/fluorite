@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: b1ARac9DBpR2u+hAv33A5Q
-! Version: 202611190303
+! Checksum: 0KYoymoqJ63Su9Lp5YJ8cQ
+! Version: 202611210302
 ! Title: Dandelion Sprout's Nordic Filters
-! Last modified: 19 Nov 2026 03:03 UTC
+! Last modified: 21 Nov 2026 03:02 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://github.com/DandelionSprout/adfilt/blob/master/Wiki/General-info.md
 !

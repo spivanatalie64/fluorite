@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: P86d5ZTfgl9cXpmgUnSOZQ
-! Version: 202611190303
+! Checksum: XpuafGQ63LOe5OQixw2miA
+! Version: 202611210302
 ! Title: Global Filters
-! Last modified: 19 Nov 2026 03:03 UTC
+! Last modified: 21 Nov 2026 03:02 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://gitlab.com/eyeo/filterlists/globalfilters
 ! Licence: https://gitlab.com/eyeo/filterlists/globalfilters/-/blob/main/LICENSE

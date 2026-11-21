@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: m87josuDGNmWfMaSwi1C8w
-! Version: 202611190303
+! Checksum: Z1vLDQh0ZClvXKqKscAFGQ
+! Version: 202611210302
 ! Title: Japanese Filters
-! Last modified: 19 Nov 2026 03:03 UTC
+! Last modified: 21 Nov 2026 03:02 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://gitlab.com/eyeo/filterlists/japanesefilters
 ! Licence: https://gitlab.com/eyeo/filterlists/japanesefilters/-/blob/main/LICENSE
