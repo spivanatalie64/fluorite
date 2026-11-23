@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: ku8h05H+0Xvl9jbcxw/26g
-! Version: 202611210302
+! Checksum: YTkpACaOiI1UyasjsLi9GA
+! Version: 202611230303
 ! Title: EasyList Lithuania
-! Last modified: 21 Nov 2026 03:02 UTC
+! Last modified: 23 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://github.com/EasyList-Lithuania/easylist_lithuania
 !

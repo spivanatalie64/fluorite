@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: TvSkeIc7HozYuTz/PBXO9A
-! Version: 202611210302
+! Checksum: j869A6wu8gy3gI70h0Qlhg
+! Version: 202611230303
 ! Title: Turkish Filters
-! Last modified: 21 Nov 2026 03:02 UTC
+! Last modified: 23 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://gitlab.com/eyeo/filterlists/turkishfilters
 ! Licence: https://gitlab.com/eyeo/filterlists/turkishfilters/-/blob/main/LICENSE
