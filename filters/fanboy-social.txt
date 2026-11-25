@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: Stqhe8VChQn7Lz0AO1cHKg
-! Version: 202611230303
+! Checksum: u5s483s0Y0PTm3JeNB6GWA
+! Version: 202611250303
 ! Title: Fanboy's Social Blocking List
-! Last modified: 23 Nov 2026 03:03 UTC
+! Last modified: 25 Nov 2026 03:03 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://easylist.to/
 ! License: http://creativecommons.org/licenses/by/3.0/
@@ -10560,6 +10560,7 @@ startrek.com##.Article_shareToggle__D2fGG
 nordvpn.com##.BlogPost__social-block
 sesamecare.com##.BlogPost_shareWrapper__HBgEG
 brighteon.com##.ButtonShare
+abcnews.com##.Byline__GooglePreferredSource
 cnbc.com##.CNBCFooter-social
 embed.listcorp.com##.CompanyPage2CompanyPageAbout__share
 miaminewtimes.com,westword.com##.ContentShareTools
@@ -10760,6 +10761,7 @@ adweek.com##.aw-social-share-container
 informationsecuritybuzz.com##.ayudawp-share-buttons
 irishtimes.com,metroecuador.com.ec,publimetro.com.mx##.b-footer__social-links-container
 irishtimes.com##.b-it-social-share-block
+carnewschina.com##.b-preferred-source
 bnnbloomberg.ca,cp24.com,ctvnews.ca,irishnews.com,tsn.ca##.b-share-bar
 protos.com##.b-sharers
 spokesman.com##.ba
@@ -11247,6 +11249,7 @@ jpost.com##.header-a
 airlive.net##.header-alert
 nova-magazine.net##.header-info-text
 israelnationalnews.com##.header-nav-addons-link
+simpleflying.com##.header-preferred-source
 archaeology.org##.header-share
 stamen.com##.header-social-media-links
 malaymail.com##.header-social-menu
