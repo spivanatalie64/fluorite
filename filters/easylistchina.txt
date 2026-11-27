@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: irWJ/Be0S57VDHPi1ej0TQ
-! Version: 202611250303
+! Checksum: FlfRlVEmdAIWuBrCki/FtA
+! Version: 202611270302
 ! Title: EasyList China
-! Last modified: 25 Nov 2026 03:03 UTC
+! Last modified: 27 Nov 2026 03:02 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://github.com/easylist/easylistchina/
 !
@@ -1320,8 +1320,32 @@ newduba.cn###jq_youxi
 ||hash.trafficmanager.net^
 ||trafficmanager.net/o.js
 !
+||s2glduwz1.com^
+||quadrant59.com^
+||ve9gs6j44.com^
+||xh2ei17sy.com^
+||ygcmsecmzzhaup.com^
+||jixgkxfhfp.icu^
+||quotient68.com^
+||jqzck6m0vv.com^
+||tu6boqunqq.com^
+||sdgugmgkcwtaij.com^
+||nq2b2hvkni.com^
+||riilabmhzs.icu^
+||7a9m8uas28.com^
+||mjf6aq4jua.com^
+||ahfhmvd0vf.com^
+||sfajs30mmk.com^
+||coty7m14cr.com^
+||noxtzixkdg.com^
 ||0jbyj9d2l.com^
 ||umd8dz8x9.com^
+||uaazwczowtfswj.com^
+||mn3hdpe1y.com^
+||9xxne23lm.com^
+||j5gv7t9sv.com^
+||zitdymshto.icu^
+||nah9b3ag8.com^
 ||j31pozck4v.com^
 ||remainder22.com^
 ||a6j9wqsyq6.com^
@@ -14400,7 +14424,6 @@ chinacsbs.com##a[href^="/plus/view.php?aid="]
 supercloudsms.com##a[href^="/redirect?"]
 96weixin.com##a[href^="/show/ads/"]
 fx112.com##a[href^="/union."]
-joyacg.top##a[href^="http"] > .img-fluid
 boniu123.cc##a[href^="http"] > img[src*="/bn_"]
 yigujin.cn##a[href^="http"]:not([href$=".html"]) > img[src*="/tp/"]
 90oo.com##a[href^="http"]:not([href*=".90oo."]) > img[src*="/tp/"]

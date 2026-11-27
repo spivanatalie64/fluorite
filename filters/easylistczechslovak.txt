@@ -1,8 +1,8 @@
 [Adblock Plus 2.0]
-! Checksum: c0km1EGwZaBs6mzPgMdmaA
-! Version: 202611250303
+! Checksum: WO6+fcy63rxZx0ODK4JKgQ
+! Version: 202611270302
 ! Title: EasyList Czech and Slovak
-! Last modified: 25 Nov 2026 03:03 UTC
+! Last modified: 27 Nov 2026 03:02 UTC
 ! Expires: 1 days (update frequency)
 ! Homepage: https://adblock.sk/
 !
